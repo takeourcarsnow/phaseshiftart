@@ -19,6 +19,10 @@ export function draw() {
   ctx.lineCap = (V.lineStyle === 'dotted') ? 'round' : 'round';
   ctx.shadowBlur = V.glowEnabled ? V.glow : 0;
   ctx.shadowColor = V.glowColor;
+  ctx.lineWidth = V.lineWidth;
+  if (V.lineStyle === 'solid') ctx.setLineDash([]);
+  else if (V.lineStyle === 'dashed') ctx.setLineDash([12, 8]);
+  else if (V.lineStyle === 'dotted') ctx.setLineDash([1, 18]);
 
   const tilt = Math.tan((Settings.wave.tiltDeg || 0) * DEG);
   const xMid = State.W * 0.5;
@@ -27,20 +31,12 @@ export function draw() {
     const layer = State.layers[L];
     if (layer.alpha <= 0.001) continue;
 
-    ctx.lineWidth = V.lineWidth;
-    if (V.lineStyle === 'solid') ctx.setLineDash([]);
-    else if (V.lineStyle === 'dashed') ctx.setLineDash([12, 8]);
-    else if (V.lineStyle === 'dotted') ctx.setLineDash([1, 18]);
-
     let strokeStyle = V.lineColor;
     if (V.colorMode === 'rainbow') {
       const hue = (Settings.internal.rainbowShift + (L * (360 / Math.max(1, State.desiredWaveCount)))) % 360;
       strokeStyle = hsl(hue, 90, 60);
     } else if (V.colorMode === 'velocity') {
-      let sum = 0; const v = State.layers[L].vel;
-      for (let i=0; i<State.sampleCount; i++) sum += Math.abs(v[i]);
-      const avgV = sum / State.sampleCount;
-      const vNorm = clamp(avgV / 600, 0, 1);
+      const vNorm = clamp(layer.avgVel / 600, 0, 1);
       const hue = lerp(Settings.internal.velocityHueMin, Settings.internal.velocityHueMax, vNorm);
       strokeStyle = hsl(hue, 90, lerp(45, 70, 1 - vNorm));
     }

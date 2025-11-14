@@ -62,6 +62,14 @@ function step(dt:number) {
     }
   }
 
+  // Compute average velocity for each layer
+  for (let L = 0; L < State.layers.length; L++) {
+    const layer = State.layers[L];
+    let sum = 0;
+    for (let i = 0; i < State.sampleCount; i++) sum += Math.abs(layer.vel[i]);
+    layer.avgVel = sum / State.sampleCount;
+  }
+
   applyLayerSeparation();
 }
 

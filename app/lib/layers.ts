@@ -13,7 +13,7 @@ export function computeLayerBaseline(total:number, idx:number) {
 }
 
 export class Layer {
-  idx:number; alpha:number; targetAlpha:number; baseY:number; targetBaseY:number; points:Float32Array; vel:Float32Array; alive:boolean;
+  idx:number; alpha:number; targetAlpha:number; baseY:number; targetBaseY:number; points:Float32Array; vel:Float32Array; alive:boolean; avgVel:number;
   constructor(idx:number) {
     this.idx = idx; this.alpha = 1; this.targetAlpha = 1; this.baseY = 0; this.targetBaseY = 0;
     this.points = new Float32Array(State.sampleCount);
@@ -22,6 +22,7 @@ export class Layer {
     this.baseY = y0; this.targetBaseY = y0;
     for (let i=0; i<State.sampleCount; i++) { this.points[i] = y0; this.vel[i] = 0; }
     this.alive = true;
+    this.avgVel = 0;
   }
   resample() {
     const oldY = this.points, oldV = this.vel;
