@@ -1,17 +1,12 @@
 import { Settings } from './config';
 import { State } from './state';
-import { DEG, TAU, clamp, frac, lerp } from './utils';
+import { DEG, lerp } from './utils';
 import { turbulenceOffset } from './turbulence';
+import { computeWaveShape, computePhysics } from './simulation-physics';
+import { computeInteraction } from './simulation-interaction';
+import { applyLayerSeparation } from './simulation-separation';
 
 const fixedDt = 1/60;
-
-export function effectiveMinGap() {
-  const V = Settings.visual;
-  const base = Settings.wave.minGap;
-  if (!Settings.wave.autoMinGap) return base;
-  const glowWidth = V.glowEnabled ? V.glow * 0.22 : 0;
-  return base + V.lineWidth * 1.1 + glowWidth;
-}
 
 export function simulate(dt:number) {
   State.accumulator += dt;
@@ -23,7 +18,7 @@ export function simulate(dt:number) {
 }
 
 function step(dt:number) {
-  const Wv = Settings.wave, Ph = Settings.physics, Tb = Settings.turbulence, It = Settings.interaction;
+  const Wv = Settings.wave, Tb = Settings.turbulence;
 
   State.pointer.sx = lerp(State.pointer.sx, State.pointer.x, 0.35);
   State.pointer.sy = lerp(State.pointer.sy, State.pointer.y, 0.35);
@@ -38,7 +33,7 @@ function step(dt:number) {
   const ang = Wv.flowAngleDeg * DEG;
   const cosA = Math.cos(ang), sinA = Math.sin(ang);
   const freq = Math.max(0.0001, Wv.frequency);
-  const duty = clamp(Wv.pulseDuty, 0.05, 0.95);
+  const duty = Wv.pulseDuty; // clamp is in computeWaveShape
 
   for (let L=0; L<State.layers.length; L++) {
     const layer = State.layers[L];
@@ -47,86 +42,27 @@ function step(dt:number) {
     const baseNorm = base / State.H;
     const uLayer = baseNorm * sinA;
     const amp = Wv.amplitude;
-    const nb = Ph.neighbor, k = Ph.spring, c = Ph.damping;
 
     for (let i=0; i<State.sampleCount; i++) {
       const x = State.xCoords[i];
       const u = State.xNorms[i] * cosA + uLayer;
-      const p = frac(freq * u + timePhase);
-      const sinv = Math.sin(TAU * p);
-
-      let shapeVal = 0;
-      switch (Wv.shape) {
-        case 'sine': shapeVal = sinv; break;
-        case 'triangle': { shapeVal = 2 * Math.abs(2 * (p - Math.floor(p + 0.5))) - 1; break; }
-        case 'square': { const xx = sinv * 6.0; shapeVal = xx * (27 + xx*xx) / (27 + 9*xx*xx); break; }
-        case 'saw': { shapeVal = 2 * (p - Math.floor(p + 0.5)); break; }
-        case 'pulse': { let v = (p < duty) ? 1 : -1; const blend = sinv * 0.5 + 0.5; v = lerp(v, sinv, 0.15) * (0.8 + 0.2 * blend); shapeVal = v; break; }
-        default: shapeVal = sinv;
-      }
-
+      const shapeVal = computeWaveShape(u, timePhase, freq, duty);
       const targetY = base + shapeVal * amp;
       const turb = turbulenceOffset(Tb.type, State.preXScaled[i], yArr[i], State.time);
-
-      let inter = 0;
-      if (It.mode !== 'off') {
-        const dx = x - State.pointer.sx;
-        const dy = yArr[i] - State.pointer.sy;
-        const dist = Math.hypot(dx, dy);
-        const r = It.radius;
-        if (dist < r) {
-          const fall = 1 - (dist / r);
-            const sI = It.strength * (State.pointer.down ? 1.0 : 0.7);
-            if (It.mode === 'push') inter += (dy / (dist + 1e-3)) * sI * fall * 160;
-            else if (It.mode === 'pull') inter -= (dy / (dist + 1e-3)) * sI * fall * 160;
-            else if (It.mode === 'gravity') inter -= Math.sign(dy) * sI * fall * 80;
-            else if (It.mode === 'swirl') inter += (dx / (dist + 1e-3)) * sI * fall * 180;
-        }
-      }
+      const inter = computeInteraction(x, yArr[i]);
 
       const y = yArr[i], v = vArr[i];
       const left = i>0 ? yArr[i-1] : yArr[i];
       const right = i<State.sampleCount-1 ? yArr[i+1] : yArr[i];
-      const lap = left - 2*y + right;
 
-      const a = ((targetY + turb + inter) - y) * k + lap * nb - v * c;
-
-      const nv = v + a * dt;
-      let ny = y + nv * dt;
-
-      if (Ph.keepInside) {
-        const m = 6;
-        if (ny < m) { ny = m; vArr[i] *= 0.5; }
-        else if (ny > State.H - m) { ny = State.H - m; vArr[i] *= 0.5; }
-      }
+      const { ny, nv } = computePhysics(y, targetY, turb, inter, left, right, v, dt);
 
       vArr[i] = nv;
       yArr[i] = ny;
     }
   }
 
-  if (State.layers.length > 1) {
-    const gap = effectiveMinGap();
-    const sepK = Ph.sepK;
-    let maxViol:number, pass = 0;
-    const maxPass = 6;
-    do {
-      maxViol = 0;
-      for (let dir = 0; dir < 2; dir++) {
-        for (let i=0; i<State.sampleCount; i++) {
-          for (let L=0; L<State.layers.length-1; L++) {
-            const A = State.layers[L], B = State.layers[L+1];
-            const diff = (B.points[i] - A.points[i]) - gap;
-            if (diff < 0) {
-              const push = -diff * 0.5;
-              A.points[i] -= push; B.points[i] += push;
-              A.vel[i] -= push * sepK; B.vel[i] += push * sepK;
-              if (-diff > maxViol) maxViol = -diff;
-            }
-          }
-        }
-      }
-      pass++;
-    } while (maxViol > 0.5 && pass < maxPass);
-  }
+  applyLayerSeparation();
 }
+
+export { effectiveMinGap } from './simulation-wave';

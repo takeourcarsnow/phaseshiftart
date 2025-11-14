@@ -62,5 +62,6 @@ export function updateContextChip(now = (typeof performance !== 'undefined' ? pe
   chip.classList.remove('warn');
   if (amp > cap + 2) { msg = 'Overlap risk'; chip.classList.add('warn'); }
   if (lowFPS) { msg = 'Perf: auto-detail'; chip.classList.add('warn'); }
-  chip.textContent = msg;
+  chip.title = msg;
+  chip.dispatchEvent(new CustomEvent('chipUpdate', { detail: msg }));
 }

@@ -1,23 +1,165 @@
 'use client';
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { boot } from './lib/main';
+import { Activity, Triangle, Square, Zap, ArrowRight, ArrowLeft, X, Move, Circle, RotateCw, Minus, Palette, Rainbow, Monitor, Layers, Sun, Blend, Gauge, Settings, CheckCircle, AlertTriangle, Pause, Maximize, Menu } from 'lucide-react';
 
 export default function Page() {
   const booted = useRef(false);
-  useEffect(() => { if (!booted.current) { boot(); booted.current = true; } }, []);
+  const [shapeValue, setShapeValue] = useState('sine');
+  const [directionValue, setDirectionValue] = useState('right');
+  const [interModeValue, setInterModeValue] = useState('off');
+  const [lineStyleValue, setLineStyleValue] = useState('solid');
+  const [colorModeValue, setColorModeValue] = useState('custom');
+  const [blendModeValue, setBlendModeValue] = useState('source-over');
+  const [ctxValue, setCtxValue] = useState('OK');
+
+  useEffect(() => {
+    if (!booted.current) { boot(); booted.current = true; }
+  }, []);
+
+  useEffect(() => {
+    const sel = document.getElementById('shape') as HTMLSelectElement;
+    if (sel) {
+      setShapeValue(sel.value);
+      const handler = () => setShapeValue(sel.value);
+      sel.addEventListener('change', handler);
+      return () => sel.removeEventListener('change', handler);
+    }
+  }, []);
+
+  useEffect(() => {
+    const sel = document.getElementById('direction') as HTMLSelectElement;
+    if (sel) {
+      setDirectionValue(sel.value);
+      const handler = () => setDirectionValue(sel.value);
+      sel.addEventListener('change', handler);
+      return () => sel.removeEventListener('change', handler);
+    }
+  }, []);
+
+  useEffect(() => {
+    const sel = document.getElementById('interMode') as HTMLSelectElement;
+    if (sel) {
+      setInterModeValue(sel.value);
+      const handler = () => setInterModeValue(sel.value);
+      sel.addEventListener('change', handler);
+      return () => sel.removeEventListener('change', handler);
+    }
+  }, []);
+
+  useEffect(() => {
+    const sel = document.getElementById('lineStyle') as HTMLSelectElement;
+    if (sel) {
+      setLineStyleValue(sel.value);
+      const handler = () => setLineStyleValue(sel.value);
+      sel.addEventListener('change', handler);
+      return () => sel.removeEventListener('change', handler);
+    }
+  }, []);
+
+  useEffect(() => {
+    const sel = document.getElementById('colorMode') as HTMLSelectElement;
+    if (sel) {
+      setColorModeValue(sel.value);
+      const handler = () => setColorModeValue(sel.value);
+      sel.addEventListener('change', handler);
+      return () => sel.removeEventListener('change', handler);
+    }
+  }, []);
+
+  useEffect(() => {
+    const sel = document.getElementById('blendMode') as HTMLSelectElement;
+    if (sel) {
+      setBlendModeValue(sel.value);
+      const handler = () => setBlendModeValue(sel.value);
+      sel.addEventListener('change', handler);
+      return () => sel.removeEventListener('change', handler);
+    }
+  }, []);
+
+  useEffect(() => {
+    const el = document.getElementById('ctxChip');
+    if (el) {
+      const handler = (e: any) => setCtxValue(e.detail);
+      el.addEventListener('chipUpdate', handler);
+      return () => el.removeEventListener('chipUpdate', handler);
+    }
+  }, []);
+
+  const getShapeIcon = (value: string) => {
+    switch(value) {
+      case 'sine': return Activity;
+      case 'triangle': return Triangle;
+      case 'square': return Square;
+      case 'saw': return Zap;
+      case 'pulse': return Circle;
+      default: return Activity;
+    }
+  };
+
+  const getDirectionIcon = (value: string) => {
+    switch(value) {
+      case 'right': return ArrowRight;
+      case 'left': return ArrowLeft;
+      default: return ArrowRight;
+    }
+  };
+
+  const getInterModeIcon = (value: string) => {
+    switch(value) {
+      case 'off': return X;
+      case 'push': return Move;
+      case 'pull': return Move;
+      case 'gravity': return Circle;
+      case 'swirl': return RotateCw;
+      default: return X;
+    }
+  };
+
+  const getLineStyleIcon = (value: string) => {
+    switch(value) {
+      case 'solid': return Minus;
+      case 'dashed': return Minus;
+      case 'dotted': return Circle;
+      default: return Minus;
+    }
+  };
+
+  const getColorModeIcon = (value: string) => {
+    switch(value) {
+      case 'custom': return Palette;
+      case 'rainbow': return Rainbow;
+      case 'velocity': return Zap;
+      default: return Palette;
+    }
+  };
+
+  const getBlendModeIcon = (value: string) => {
+    switch(value) {
+      case 'source-over': return Blend;
+      case 'lighter': return Sun;
+      case 'screen': return Monitor;
+      case 'overlay': return Layers;
+      case 'soft-light': return Sun;
+      case 'difference': return Minus;
+      default: return Blend;
+    }
+  };
+
+  const ctxIcon = ctxValue === 'OK' ? CheckCircle : AlertTriangle;
+
+  const CtxIcon = ctxIcon;
   return (
     <div className="app">
       <aside>
         <div className="panel" id="panel">
           <div className="topbar">
-            <div className="title">Wave Playground</div>
-            <span className="chip" id="fpsChip">FPS: —</span>
-            <span className="chip" id="detailChip">Detail: —</span>
-            <span className="chip" id="ctxChip" aria-live="polite">OK</span>
+            <div className="title"></div>
+            <span className="chip" id="fpsChip"><Gauge size={14} /></span>
+            <span className="chip" id="detailChip"><Settings size={14} /></span>
+            <span className="chip" id="ctxChip"><CtxIcon size={14} /></span>
             <div className="spacer" />
-            <button className="btn" id="pauseBtn">Pause</button>
-            <button className="btn" id="fullscreenBtn">Fullscreen</button>
-            <button className="btn" id="togglePanel">Menu</button>
+            <button className="btn" id="fullscreenBtn"><Maximize size={14} /></button>
           </div>
 
           <div className="sec">Waves</div>
@@ -65,13 +207,23 @@ export default function Page() {
 
           <div className="group">
             <label>Shape</label>
-            <select id="shape">
+            <select id="shape" style={{display: 'none'}}>
               <option value="sine">Sine</option>
               <option value="triangle">Triangle</option>
               <option value="square">Square</option>
               <option value="saw">Sawtooth</option>
               <option value="pulse">Pulse</option>
             </select>
+            <button className="btn" onClick={() => {
+              const sel = document.getElementById('shape') as HTMLSelectElement;
+              const opts = Array.from(sel.options);
+              const currentIndex = opts.findIndex(o => o.value === shapeValue);
+              const nextIndex = (currentIndex + 1) % opts.length;
+              sel.value = opts[nextIndex].value;
+              sel.dispatchEvent(new Event('change'));
+            }}>
+              {React.createElement(getShapeIcon(shapeValue), {size: 16})}
+            </button>
           </div>
           <div className="group hidden" id="row_pulseDuty">
             <label>Pulse duty</label><div className="value" id="v_duty"></div>
@@ -81,10 +233,20 @@ export default function Page() {
           <div className="sec">Flow</div>
           <div className="group">
             <label>Direction</label>
-            <select id="direction">
+            <select id="direction" style={{display: 'none'}}>
               <option value="right">Right →</option>
               <option value="left">← Left</option>
             </select>
+            <button className="btn" onClick={() => {
+              const sel = document.getElementById('direction') as HTMLSelectElement;
+              const opts = Array.from(sel.options);
+              const currentIndex = opts.findIndex(o => o.value === directionValue);
+              const nextIndex = (currentIndex + 1) % opts.length;
+              sel.value = opts[nextIndex].value;
+              sel.dispatchEvent(new Event('change'));
+            }}>
+              {React.createElement(getDirectionIcon(directionValue), {size: 16})}
+            </button>
           </div>
           <div className="group">
             <label>Flow angle (deg)</label><div className="value" id="v_flowAngle"></div>
@@ -123,21 +285,27 @@ export default function Page() {
             <label>Noise seed</label>
             <input id="noiseSeed" type="number" className="mono" step={1} min={0} max={2147483647} />
           </div>
-          <div className="group hidden" id="row_reseed">
-            <button className="btn" id="reseed">Re-seed</button>
-            <div className="subtle">For noise/perlin/chaos</div>
-          </div>
 
           <div className="sec">Interaction</div>
           <div className="group">
             <label>Mode</label>
-            <select id="interMode">
+            <select id="interMode" style={{display: 'none'}}>
               <option value="off">Off</option>
               <option value="push">Push</option>
               <option value="pull">Pull</option>
               <option value="gravity">Gravity</option>
               <option value="swirl">Swirl</option>
             </select>
+            <button className="btn" onClick={() => {
+              const sel = document.getElementById('interMode') as HTMLSelectElement;
+              const opts = Array.from(sel.options);
+              const currentIndex = opts.findIndex(o => o.value === interModeValue);
+              const nextIndex = (currentIndex + 1) % opts.length;
+              sel.value = opts[nextIndex].value;
+              sel.dispatchEvent(new Event('change'));
+            }}>
+              {React.createElement(getInterModeIcon(interModeValue), {size: 16})}
+            </button>
           </div>
           <div className="group hidden" id="row_interStrength">
             <label>Strength</label><div className="value" id="v_interStrength"></div>
@@ -205,7 +373,7 @@ export default function Page() {
           </div>
           <div className="group">
             <label>Blend mode</label>
-            <select id="blendMode">
+            <select id="blendMode" style={{display: 'none'}}>
               <option value="source-over">Normal</option>
               <option value="lighter">Lighter</option>
               <option value="screen">Screen</option>
@@ -213,6 +381,16 @@ export default function Page() {
               <option value="soft-light">Soft light</option>
               <option value="difference">Difference</option>
             </select>
+            <button className="btn" onClick={() => {
+              const sel = document.getElementById('blendMode') as HTMLSelectElement;
+              const opts = Array.from(sel.options);
+              const currentIndex = opts.findIndex(o => o.value === blendModeValue);
+              const nextIndex = (currentIndex + 1) % opts.length;
+              sel.value = opts[nextIndex].value;
+              sel.dispatchEvent(new Event('change'));
+            }}>
+              {React.createElement(getBlendModeIcon(blendModeValue), {size: 16})}
+            </button>
           </div>
 
           <div className="group">

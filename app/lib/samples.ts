@@ -11,7 +11,7 @@ export function computeSamples() {
   for (let i=0; i<State.sampleCount; i++) { State.xCoords[i] = i * step; State.xNorms[i] = State.xCoords[i] / W; }
   State.preXScaled = new Float32Array(State.sampleCount);
   State.layers.forEach((l) => l.resample());
-  const chip = byId('detailChip'); if (chip) chip.textContent = `Detail: ${State.stride}px`;
+  const chip = byId('detailChip'); if (chip) chip.title = `Detail: ${State.stride}px`;
   const lbl = byId('v_detail'); if (lbl) lbl.textContent = `${State.stride}`;
 }
 
